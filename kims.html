@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Kim's family lineage</title>
+    <script type="text/javascript" src="vivagraph.min.js"></script>
+	<script type="text/javascript" src="graph.js"></script>
+    <script type="text/javascript">
+        function main () {
+            var graphics = Viva.Graph.View.svgGraphics(),
+                nodeSize = 48;
+
+		   graphics.node(createNodeWithImage)
+	        .placeNode(placeNodeWithTransform);
+
+            // To render an arrow we have to address two problems:
+            //  1. Links should start/stop at node's bounding box, not at the node center.
+            //  2. Render an arrow shape at the end of the link.
+            var createMarker = function(id, color) {
+                    return Viva.Graph.svg('marker')
+                               .attr('id', id)
+						       .attr('stroke', color)
+							   .attr('fill', color)
+                               .attr('viewBox', "0 0 10 10")
+                               .attr('refX', "10")
+                               .attr('refY', "5")
+                               .attr('markerUnits', "strokeWidth")
+                               .attr('markerWidth', "10")
+                               .attr('markerHeight', "5")
+                               .attr('orient', "auto");
+                },
+                marker = createMarker('Arrow', '#999');
+            marker.append('path').attr('d', 'M 0 0 L 10 5 L 0 10 z');
+
+            // Marker should be defined only once in <defs> child element of root <svg> element:
+            var defs = graphics.getSvgRoot().append('defs');
+            defs.append(marker);
+
+            var geom = Viva.Graph.geom();
+
+            graphics.link(function(link){
+                // Notice the Triangle marker-end attribe:
+				//alert(link.data.id + ', ' +link.data.type);
+				var label = Viva.Graph.svg('text').attr('id','label_'+link.data.id).text(link.data.type);
+				graphics.getSvgRoot().childNodes[0].append(label);
+				if (link.data.type == 'child') {
+					var a = navigator.userAgent;
+					if (/msie|trident/i.test(a)) {
+						return Viva.Graph.svg('path')
+                           .attr('stroke', '#999')
+						   .attr('stroke-width', '2')
+                           .attr('id', link.data.id);
+					} else {
+						return Viva.Graph.svg('path')
+                           .attr('stroke', '#999')
+						   .attr('stroke-width', '2')
+                           .attr('id', link.data.id)
+                           .attr('marker-end', 'url(#Arrow)');
+					}
+				} else {
+					return Viva.Graph.svg('path')
+                           .attr('stroke', 'blue')
+						   .attr('stroke-width', '2')
+                           .attr('id', link.data.id);
+				}
+            }).placeLink(function(linkUI, fromPos, toPos) {
+                // Here we should take care about
+                //  "Links should start/stop at node's bounding box, not at the node center."
+
+                // For rectangular nodes Viva.Graph.geom() provides efficient way to find
+                // an intersection point between segment and rectangle
+                var toNodeSize = nodeSize,
+                    fromNodeSize = nodeSize;
+
+                var from = geom.intersectRect(
+                        // rectangle:
+                                fromPos.x - fromNodeSize / 2, // left
+                                fromPos.y - fromNodeSize / 2, // top
+                                fromPos.x + fromNodeSize / 2, // right
+                                fromPos.y + fromNodeSize / 2, // bottom
+                        // segment:
+                                fromPos.x, fromPos.y, toPos.x, toPos.y)
+                           || fromPos; // if no intersection found - return center of the node
+
+                var to = geom.intersectRect(
+                        // rectangle:
+                                toPos.x - toNodeSize / 2, // left
+                                toPos.y - toNodeSize / 2, // top
+                                toPos.x + toNodeSize / 2, // right
+                                toPos.y + toNodeSize / 2, // bottom
+                        // segment:
+                                toPos.x, toPos.y, fromPos.x, fromPos.y)
+                            || toPos; // if no intersection found - return center of the node
+
+                var data = 'M' + from.x + ',' + from.y +
+                           'L' + to.x + ',' + to.y;
+
+                linkUI.attr("d", data);
+				document.getElementById('label_'+linkUI.attr('id'))
+					.attr("x", (from.x + to.x) / 2)
+					.attr("y", (from.y + to.y) / 2);
+            });
+
+            var graph = getGraph();
+			var root = graph.getNode(1);
+			root.isPinned = true;
+
+			var layout = Viva.Graph.Layout.forceDirected(graph, {
+				springLength : 170
+			});
+
+            // All is ready. Render the graph:
+            var renderer = Viva.Graph.View.renderer(graph, {
+					layout : layout,
+                    graphics : graphics
+                });
+            renderer.run();
+
+			document.body.addEventListener('keydown', function (e) {
+					if (e.which === 32) { // spacebar
+						renderer.reset();
+					}
+			});
+
+		function createNodeWithImage(node) {
+			var radius = 24;
+			// First, we create a fill pattern and add it to SVG's defs:
+			// pattren: Defines coordinates you want the view to show and the size of the view
+			// id, patterUnits, width, height
+			var pattern = Viva.Graph.svg('pattern')
+			  .attr('id', "imageFor_" + node.id)
+			  .attr('patternUnits', "userSpaceOnUse")
+			  .attr('width', 64)
+			  .attr('height', 64)
+			// image: defines an image, x, y, width, height, xlink:href
+			var image = Viva.Graph.svg('image')
+			  .attr('x', '0')
+			  .attr('y', '0')
+			  .attr('height', radius * 2)
+			  .attr('width', radius * 2)
+			  .link(node.data.url);
+			pattern.append(image);
+			defs.append(pattern);
+
+			// now create actual node and reference created fill pattern:
+			// g: Used to group together elements, id, fill, opacity
+			// circle: cx, cy, r, fill
+			var ui = Viva.Graph.svg('g');
+			var text = Viva.Graph.svg('text').attr('y', '-4px').text(node.data.name)
+			var circle = Viva.Graph.svg('circle')
+			  .attr('cx', radius)
+			  .attr('cy', radius)
+			  .attr('fill', 'url(#imageFor_' + node.id + ')')
+			  .attr('r', radius);
+
+			ui.append(text);
+			ui.append(circle);
+			return ui;
+		}
+
+		function placeNodeWithTransform(nodeUI, pos) {
+			// Shift image to let links go to the center:
+			nodeUI.attr('transform', 'translate(' + (pos.x - 24) + ',' + (pos.y - 24) + ')');
+		}
+	}
+    </script>
+
+    <style type="text/css" media="screen">
+        html, body, svg { width: 100%; height: 100%;}
+    </style>
+</head>
+<body onload='main()'>
+
+</body>
+</html>
