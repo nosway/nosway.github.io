@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Review Round</title>
+    <script type="text/javascript" src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=stfp4b8g6o"></script>
+</head>
+<body>
+
+<div>
+JSON file to read: <input id="file" type="file"><br>
+<button id="loadFile" onclick="loadFile()">Load file</button><br>
+</div>
+<div id="info">Left click on the map will display LatLng coord.</div>
+<input type="button" value="Measure distance" onClick="showData()"/><br>
+From: <input type="radio" name="point" value="from" checked="yes"/><div id="from"></div><br>
+To: <input type="radio" name="point" value="to"/><div id="to"></div><br>
+<div id="map" style="width:1536px;height:1024px;"></div>
+
+<script>
+var scoreCard;
+
+var mapOptions = {
+    center: new naver.maps.LatLng(37.1815729, 127.2478406),
+    zoom: 18,
+    minZoom: 16,
+    maxZoom: 20,
+    zoomOrigin: new naver.maps.LatLng(37.1815729, 127.2478406)
+};
+
+var map = new naver.maps.Map('map', mapOptions);
+map.setMapTypeId(naver.maps.MapTypeId['HYBRID']); // NORMAL, TERRAIN, HYBRID, SATELLITE
+
+map.addListener('click', function(e) {
+        var latlng = e.coord;
+        //alert('LatLng: ' + latlng.toString());
+        showInfo('LatLng: ' + latlng.toString());
+       
+        var points = document.getElementsByName('point'); 
+        if (points[0].checked) {
+            //alert(points[0].value);
+            p1 = latlng;
+            document.getElementById("from").innerHTML = 'LatLng: ' + latlng.toString();
+        } else {
+            //alert(points[1].value);
+            p2 = latlng;
+            document.getElementById("to").innerHTML = 'LatLng: ' + latlng.toString();
+        }
+         
+        
+});
+
+var markers = [];
+var iws = [];
+
+function loadLocations(obj) {
+    scoreCard = JSON.parse(obj);
+
+    //alert(scoreCard.Shots.length);
+
+    for (var i = 0; i < scoreCard.Shots.length; i++) {
+        var shot = scoreCard.Shots[i];
+        var marker;
+
+
+        if (shot.type == 0) {
+            marker = new naver.maps.Marker({
+                position: new naver.maps.LatLng(shot.lat, shot.lng),
+                icon: 'bluemarker.png',
+                map: map
+            });
+        } else {
+            marker = new naver.maps.Marker({
+                position: new naver.maps.LatLng(shot.lat, shot.lng),
+                //icon: 'ball1.png',
+                icon: 'marker-30.png',
+                map: map
+            });
+        }
+
+        var iw = new naver.maps.InfoWindow({
+            content: '<div style="width:100px;text-align:center;padding:2px;">' + shot.tag +'</div>'
+        });
+
+        markers.push(marker);
+        iws.push(iw);
+    }
+
+    naver.maps.Event.addListener(map, 'idle', function() {
+        updateMarkers(map, markers);
+    });
+
+    for (var i=0, ii=markers.length; i<ii; i++) {
+        naver.maps.Event.addListener(markers[i], 'click', getClickHandler(i));
+    }
+
+}    
+
+function updateMarkers(map, markers) {
+
+    var mapBounds = map.getBounds();
+    var marker, position;
+
+    for (var i = 0; i < markers.length; i++) {
+
+        marker = markers[i]
+        position = marker.getPosition();
+
+        if (mapBounds.hasLatLng(position)) {
+            showMarker(map, marker);
+        } else {
+            hideMarker(map, marker);
+        }
+    }
+}
+
+function showMarker(map, marker) {
+
+    if (marker.setMap()) return;
+    marker.setMap(map);
+}
+
+function hideMarker(map, marker) {
+
+    if (!marker.setMap()) return;
+    marker.setMap(null);
+}
+
+// 해당 마커의 인덱스를 seq라는 클로저 변수로 저장하는 이벤트 핸들러를 반환합니다.
+function getClickHandler(seq) {
+    return function(e) {
+        var marker = markers[seq],
+            iw = iws[seq];
+
+        if (iw.getMap()) {
+            iw.close();
+        } else {
+            iw.open(map, marker);
+        }
+    }
+}
+
+function loadFile() {
+    var files = document.getElementById("file").files;
+
+    //alert(files[0].name);
+
+    if(!files || files.length == 0) {
+        alert("File loading either not supported or no file selected!");
+        return;
+    }
+    var reader = new FileReader();
+    reader.onload = function() { loadLocations(reader.result); };
+    //reader.onload = function() { alert(reader.result); }; //
+    reader.readAsText(files[0], "UTF-8");
+}
+
+function showInfo(obj) {
+    document.getElementById("info").innerHTML = "(" + obj + ")";
+}
+
+var p1 = new naver.maps.LatLng(37.1808066,127.24885);
+var p2 = new naver.maps.LatLng(37.1797428,127.2509123);
+
+function showData() {
+
+    var polyline = new naver.maps.Polyline({
+        map: map,
+        visible: true,
+        strokeWeight: 3,
+        strokeColor: '#FFFFFF',
+        path: [ 
+            p1, p2
+        ]
+        
+    }); 
+
+    showInfo('Distance = ' + polyline.getDistance() + 'M');
+}
+
+</script>
+</body>
+</html>
