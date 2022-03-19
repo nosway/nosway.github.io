@@ -96,6 +96,9 @@ function loadLocations(obj) {
         naver.maps.Event.addListener(markers[i], 'click', getClickHandler(i));
     }
 
+    if (scoreCard.Shots.length > 0) {
+        map.setCenter(new naver.maps.LatLng(scoreCard.Shots[0].lat, scoreCard.Shots[0].lng))
+    }
 }    
 
 function updateMarkers(map, markers) {
