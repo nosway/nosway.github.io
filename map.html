@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Golf clubs</title>
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=a0add6dfdc6730b0c269c1fd66b852ae"></script>
+</head>
+<body>
+
+<div>
+Golf Club</div>
+<div id="select"></div>
+<input type="button" value="View" onClick="Goto()"/><br>
+<div id="map" style="width:100%;height:500px;"></div>
+
+<script>
+let golfClubs = [ 
+    { "name": "곤지암", "lat": 37.33366005762192, "lng": 127.29391367085879 },
+    { "name": "남촌", "lat": 37.34804379260104, "lng": 127.41545465490265 },
+    { "name": "롯데스카이힐제주", "lat": 33.28711488073262, "lng": 126.40525385477999 },
+    { "name": "블랙스톤", "lat": 37.16435588002332, "lng": 127.61337299723498 },
+    { "name": "블루헤런", "lat": 37.384441729914165, "lng": 127.64788339723209 },
+    { "name": "신원", "lat": 37.18122217570862, "lng": 127.24754928373326 },
+    { "name": "이스트밸리", "lat":   37.40555786979001, "lng": 127.38467758374037 },
+    { "name": "잭니클라우스", "lat": 37.3798922034526, "lng": 126.62394406839609 },
+    { "name": "천룡", "lat": 36.94739355139532, "lng": 127.3866737792485 },
+    { "name": "트리니티", "lat": 37.208212824701825, "lng": 127.57721618377042 },
+    { "name": "파인스톤", "lat": 36.96488121415082, "lng": 126.66764256838279 },
+    { "name": "핀크스", "lat": 33.315346946386775, "lng": 126.38870945478077 },
+    { "name": "화산", "lat": 37.154084965166106, "lng": 127.23360464670097 }
+];
+
+var select_html = "<select id='golfclub'>";
+for (let i = 0; i < golfClubs.length; i++) {
+   select_html += "<option value='" + i + "'>" + golfClubs[i].name + "</option>";
+}
+select_html += "</select>";
+document.getElementById('select').innerHTML = select_html;
+
+var container = document.getElementById('map');
+var options = {
+    center: new kakao.maps.LatLng(37.1815729, 127.2478406),
+    level: 3
+};
+
+var map = new kakao.maps.Map(container, options);
+map.setMapTypeId(kakao.maps.MapTypeId.HYBRID);
+        var zoomControl = new kakao.maps.ZoomControl();
+map.addControl(zoomControl, kakao.maps.ControlPosition.LEFT);
+
+function Goto() {
+    //alert("select: " + golfclub.value);
+    var index = golfclub.value;
+    //alert(golfClubs[index].name)
+   
+   // 이동할 위도 경도 위치를 생성합니다
+    var location = new kakao.maps.LatLng(golfClubs[index].lat, golfClubs[index].lng);
+
+    // 지도 중심을 이동 시킵니다
+    map.setCenter(location);
+}
+
+</script>
+</body>
+</html>
