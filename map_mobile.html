@@ -9,8 +9,7 @@
 </head>
 <body>
 
-<div id="select"></div>
-<input type="button" value="View" onClick="Goto()"/><br>
+<div id="select"></div><br>
 <div id="map" style="width:100%;height:600px;"></div>
 
 <script>
@@ -30,9 +29,13 @@ let golfClubs = [
     { "name": "화산", "lat": 37.154084965166106, "lng": 127.23360464670097 }
 ];
 
-var select_html = "<select id='golfclub'>";
+var select_html = "Golf Club <select id='golfclub' onChange='Goto()'>";
 for (let i = 0; i < golfClubs.length; i++) {
-   select_html += "<option value='" + i + "'>" + golfClubs[i].name + "</option>";
+    if (golfClubs[i].name == "신원") {
+        select_html += "<option value='" + i + "' selected>" + golfClubs[i].name + "</option>";
+    } else {
+        select_html += "<option value='" + i + "'>" + golfClubs[i].name + "</option>";
+    }
 }
 select_html += "</select>";
 document.getElementById('select').innerHTML = select_html;
