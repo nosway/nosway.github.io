@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf Shot Tracking</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 8px;
+        }
+        .shot-info {
+            background-color: #f9f9f9;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+        }
+        .hole-info {
+            background-color: #e3f2fd;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 4px solid #2196F3;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background-color: #fff3e0;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            border: 1px solid #ff9800;
+        }
+        .error-message {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ef5350;
+            margin: 20px 0;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-style: italic;
+        }
+        .shot-type {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .shot-type.tee {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .shot-type.approach {
+            background-color: #2196F3;
+            color: white;
+        }
+        .shot-type.putt {
+            background-color: #FF9800;
+            color: white;
+        }
+        .shot-type.other {
+            background-color: #9E9E9E;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏌️ Golf Shot Tracking</h1>
+            <p>골프 라운드 샷 데이터 분석</p>
+        </div>
+        
+        <div id="content">
+            <div class="loading">
+                <h3>데이터를 불러오는 중...</h3>
+                <p>샷 데이터가 전송되면 자동으로 표시됩니다.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // POST 데이터를 받기 위한 함수
+        function handlePostData() {
+            // POST 데이터가 있는지 확인
+            const postData = getPostData();
+            
+            if (postData && postData.Shots) {
+                displayShotData(postData.Shots);
+            } else {
+                // POST 데이터가 없으면 안내 메시지 표시
+                document.getElementById('content').innerHTML = `
+                    <div class="no-data">
+                        <h3>샷 데이터가 없습니다</h3>
+                        <p>Flutter 앱에서 "샷 데이터보기" 버튼을 눌러 데이터를 전송해주세요.</p>
+                        <p>또는 URL 파라미터로 jsondata를 전달할 수도 있습니다.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // POST 데이터를 가져오는 함수
+        function getPostData() {
+            // POST 데이터가 있는지 확인 (서버에서 전달된 경우)
+            if (window.postData) {
+                return window.postData;
+            }
+            
+            // URL 파라미터에서 jsondata 확인 (기존 방식 지원)
+            const urlParams = new URLSearchParams(window.location.search);
+            const jsonData = urlParams.get('jsondata');
+            
+            if (jsonData) {
+                try {
+                    return JSON.parse(jsonData);
+                } catch (e) {
+                    console.error('JSON 파싱 오류:', e);
+                    return null;
+                }
+            }
+            
+            return null;
+        }
+
+        // 샷 데이터를 표시하는 함수
+        function displayShotData(shots) {
+            if (!shots || shots.length === 0) {
+                document.getElementById('content').innerHTML = `
+                    <div class="no-data">
+                        <h3>샷 데이터가 없습니다</h3>
+                        <p>전송된 샷 데이터가 비어있습니다.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // 통계 계산
+            const stats = calculateStats(shots);
+            
+            // 홀별로 샷 그룹화
+            const holes = groupShotsByHole(shots);
+            
+            let html = `
+                <div class="stats">
+                    <div class="stat-card">
+                        <h3>총 샷 수</h3>
+                        <p style="font-size: 24px; font-weight: bold; color: #4CAF50;">${shots.length}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>홀 수</h3>
+                        <p style="font-size: 24px; font-weight: bold; color: #2196F3;">${Object.keys(holes).length}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>평균 샷/홀</h3>
+                        <p style="font-size: 24px; font-weight: bold; color: #FF9800;">${(shots.length / Object.keys(holes).length).toFixed(1)}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>총 거리</h3>
+                        <p style="font-size: 24px; font-weight: bold; color: #9C27B0;">${stats.totalDistance.toFixed(1)}m</p>
+                    </div>
+                </div>
+            `;
+
+            // 홀별 정보 표시
+            Object.keys(holes).sort((a, b) => parseInt(a) - parseInt(b)).forEach(holeNum => {
+                const holeShots = holes[holeNum];
+                const holeStats = calculateHoleStats(holeShots);
+                
+                html += `
+                    <div class="hole-info">
+                        <h3>홀 ${parseInt(holeNum) + 1}</h3>
+                        <p><strong>샷 수:</strong> ${holeShots.length} | <strong>총 거리:</strong> ${holeStats.totalDistance.toFixed(1)}m</p>
+                `;
+                
+                holeShots.forEach((shot, index) => {
+                    const shotType = getShotTypeText(shot.type);
+                    const shotTypeClass = getShotTypeClass(shot.type);
+                    
+                    html += `
+                        <div class="shot-info">
+                            <strong>샷 ${index + 1}</strong>
+                            <span class="shot-type ${shotTypeClass}">${shotType}</span>
+                            <br>
+                            <strong>위치:</strong> ${shot.lat.toFixed(6)}, ${shot.lng.toFixed(6)}
+                            ${shot.tag ? `<br><strong>태그:</strong> ${shot.tag}` : ''}
+                        </div>
+                    `;
+                });
+                
+                html += `</div>`;
+            });
+
+            document.getElementById('content').innerHTML = html;
+        }
+
+        // 통계 계산
+        function calculateStats(shots) {
+            let totalDistance = 0;
+            
+            for (let i = 1; i < shots.length; i++) {
+                const prev = shots[i-1];
+                const curr = shots[i];
+                
+                if (prev.hole === curr.hole) {
+                    const distance = calculateDistance(prev.lat, prev.lng, curr.lat, curr.lng);
+                    totalDistance += distance;
+                }
+            }
+            
+            return { totalDistance };
+        }
+
+        // 홀별 통계 계산
+        function calculateHoleStats(holeShots) {
+            let totalDistance = 0;
+            
+            for (let i = 1; i < holeShots.length; i++) {
+                const prev = holeShots[i-1];
+                const curr = holeShots[i];
+                const distance = calculateDistance(prev.lat, prev.lng, curr.lat, curr.lng);
+                totalDistance += distance;
+            }
+            
+            return { totalDistance };
+        }
+
+        // 홀별로 샷 그룹화
+        function groupShotsByHole(shots) {
+            const holes = {};
+            
+            shots.forEach(shot => {
+                if (!holes[shot.hole]) {
+                    holes[shot.hole] = [];
+                }
+                holes[shot.hole].push(shot);
+            });
+            
+            return holes;
+        }
+
+        // 거리 계산 (Haversine 공식)
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371000; // 지구 반지름 (미터)
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // 샷 타입 텍스트 변환
+        function getShotTypeText(type) {
+            switch(type) {
+                case 0: return '티샷';
+                case 1: return '어프로치';
+                case 2: return '퍼트';
+                default: return '기타';
+            }
+        }
+
+        // 샷 타입 CSS 클래스
+        function getShotTypeClass(type) {
+            switch(type) {
+                case 0: return 'tee';
+                case 1: return 'approach';
+                case 2: return 'putt';
+                default: return 'other';
+            }
+        }
+
+        // 페이지 로드 시 실행
+        document.addEventListener('DOMContentLoaded', function() {
+            // POST 데이터 처리
+            handlePostData();
+            
+            // POST 데이터를 받기 위한 이벤트 리스너 (필요시)
+            window.addEventListener('message', function(event) {
+                if (event.data && event.data.type === 'shotData') {
+                    displayShotData(event.data.shots);
+                }
+            });
+        });
+
+        // 서버에서 POST 데이터를 받았을 때 호출할 함수
+        function setPostData(data) {
+            window.postData = data;
+            handlePostData();
+        }
+    </script>
+</body>
+</html>
