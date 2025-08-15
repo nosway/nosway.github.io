@@ -22,6 +22,13 @@ To: <input type="radio" name="point" value="to"/><div id="to"></div><br>
 <script>
 var scoreCard;
 
+// POST 데이터를 받기 위한 함수
+function setPostData(data) {
+    if (data && data.Shots) {
+        loadLocations(JSON.stringify(data));
+    }
+}
+
 var mapOptions = {
     center: new naver.maps.LatLng(37.1815729, 127.2478406),
     zoom: 18,
@@ -35,7 +42,15 @@ map.setMapTypeId(naver.maps.MapTypeId['HYBRID']); // NORMAL, TERRAIN, HYBRID, SA
 map.addListener('init', function() {
 	//alert('naver map init event');
 	const urlParams = new URLSearchParams(window.location.search);
-	loadLocations(urlParams.get('jsondata'));	
+	const jsonData = urlParams.get('jsondata');
+	
+	// URL 파라미터가 있으면 로드, 없으면 POST 데이터 대기
+	if (jsonData) {
+		loadLocations(jsonData);
+	} else {
+		// POST 데이터 대기 상태 표시
+		document.getElementById("info").innerHTML = "POST 데이터를 기다리는 중... 또는 URL 파라미터로 jsondata를 전달하세요.";
+	}
 });
 map.addListener('click', function(e) {
         var latlng = e.coord;
@@ -65,7 +80,13 @@ function loadLocations(jsonData) {
     	//alert('No data');
         return;
     }
-    scoreCard = JSON.parse(jsonData);
+    
+    // JSON 문자열이면 파싱, 이미 객체면 그대로 사용
+    if (typeof jsonData === 'string') {
+        scoreCard = JSON.parse(jsonData);
+    } else {
+        scoreCard = jsonData;
+    }
 
     //alert(scoreCard.Shots.length);
 
@@ -107,8 +128,10 @@ function loadLocations(jsonData) {
 
     if (scoreCard.Shots.length > 0) {
         map.setCenter(new naver.maps.LatLng(scoreCard.Shots[0].lat, scoreCard.Shots[0].lng))
+        // POST 데이터 로드 완료 시 안내 메시지 업데이트
+        document.getElementById("info").innerHTML = "샷 데이터 로드 완료. 지도에서 마커를 클릭하여 정보를 확인하세요.";
     }
-}    
+}
 
 function updateMarkers(map, markers) {
 
