@@ -93,7 +93,14 @@ function loadLocations(jsonData) {
     for (var i = 0; i < scoreCard.Shots.length; i++) {
         var shot = scoreCard.Shots[i];
         var marker;
+		var tag = shot.tag
+		var prevShotHole;
 
+		if (i != 0) { 
+			if (prevShotHole == shot.hole) {
+				tag = shot.tag + "(distance)";
+			}
+		}
 
         if (shot.type == 0) {
             marker = new naver.maps.Marker({
@@ -111,11 +118,12 @@ function loadLocations(jsonData) {
         }
 
         var iw = new naver.maps.InfoWindow({
-            content: '<div style="width:100px;text-align:center;padding:2px;">' + shot.tag +'</div>'
+            content: '<div style="width:100px;text-align:center;padding:2px;">' + tag +'</div>'
         });
 
         markers.push(marker);
         iws.push(iw);
+		prevShotHole = shot.hole;
     }
 
     naver.maps.Event.addListener(map, 'idle', function() {
