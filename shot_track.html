@@ -94,11 +94,23 @@ function loadLocations(jsonData) {
         var shot = scoreCard.Shots[i];
         var marker;
 		var tag = shot.tag
-		var prevShotHole;
 
 		if (i != 0) { 
-			if (prevShotHole == shot.hole) {
-				tag = shot.tag + "(distance)";
+			if (scoreCard.Shots[i-1].hole == shot.hole) {
+				var p1 = new naver.maps.LatLng(scoreCard.Shots[i-1].lat, scoreCard.Shots[i-1].lng);
+				var p2 = new naver.maps.LatLng(shot.lat, shot.lng);
+ 
+				var polyline = new naver.maps.Polyline({
+					map: map,
+					visible: false,
+					strokeWeight: 3,
+					strokeColor: '#FFFFFF',
+					path: [ 
+					    p1, p2
+					]
+				}); 
+
+				tag = shot.tag + '(' + polyline.getDistance().toFixed(1) + " M)";
 			}
 		}
 
@@ -123,7 +135,6 @@ function loadLocations(jsonData) {
 
         markers.push(marker);
         iws.push(iw);
-		prevShotHole = shot.hole;
     }
 
     naver.maps.Event.addListener(map, 'idle', function() {
